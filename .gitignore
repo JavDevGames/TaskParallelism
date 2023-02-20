@@ -5,3 +5,7 @@ Builds/**
 .vs/ProgressivePuzzles/v15/Server/sqlite3/storage.ide-wal
 .vs/ProgressivePuzzles/v15/Server/sqlite3/storage.ide-shm
 .vs/ProgressivePuzzles/v15/Server/sqlite3/storage.ide
+Debug
+Release
+Output
+TestFiles
