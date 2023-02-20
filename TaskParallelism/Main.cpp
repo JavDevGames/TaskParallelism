@@ -81,21 +81,30 @@ void ParseTestFiles()
         return a.second > b.second;
     });
 
-    ofstream outFile("Output/top_words.txt"); // Open output file
-    if (outFile.is_open())
+
+    for (size_t i = 0; i < fileNames.size(); ++i)
     {
-        int count = 0;
-        for (const auto& wordFreqPair : wordFreqVec) {
-            outFile << wordFreqPair.first << ": " << wordFreqPair.second << endl; // Write top words to output file
-            count++;
-            if (count == 10) { // Limit to top 10 words
-                break;
+        string path = "Output/top_words_" + std::to_string(i) + ".txt";
+
+        ofstream outFile(path); // Open output file
+        if (outFile.is_open())
+        {
+            int count = 0;
+            for (const auto& wordFreqPair : wordFreqVec)
+            {
+                outFile << wordFreqPair.first << ": " << wordFreqPair.second << endl; // Write top words to output file
+                count++;
+                if (count == 10) 
+                {
+                    // Limit to top 10 words
+                    break;
+                }
             }
+            outFile.close(); // Close output file
         }
-        outFile.close(); // Close output file
-    }
-    else 
-    {
-        cout << "Unable to open output file" << endl;
+        else
+        {
+            cout << "Unable to open output file" << endl;
+        }
     }
 }
