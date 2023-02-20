@@ -6,6 +6,7 @@
 #include <sstream>
 #include <filesystem>
 #include "concurrentqueue.h"
+#include <cstdio>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -19,7 +20,7 @@ int main()
     CreateTestFiles();
  
     //Single threaded
-    //ParseTestFiles();
+    ParseTestFiles();
 
     //Single threaded
     ParseTestFilesConcurrent();
@@ -29,7 +30,7 @@ void CreateTestFiles()
 {
     int numFiles = 1000; // Number of files to generate
     int wordsPerFile = 1000; // Number of words per file
-    string directory = "TestFiles/"; // Directory to save files in
+    string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles\\"; // Directory to save files in
 
     for (int i = 1; i <= numFiles; i++) {
         stringstream fileName;
@@ -47,11 +48,11 @@ void CreateTestFiles()
     }
 }
 
-void ParseTestFiles()
+__declspec(noinline) void ParseTestFiles()
 {
     unordered_map<string, int> wordFreq; // To keep track of word frequency
 
-    std::string directory = "TestFiles"; // Directory containing input files
+    std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles"; // Directory containing input files
     std::vector<std::string> fileNames;
 
     // Get all file paths in the directory
@@ -63,14 +64,31 @@ void ParseTestFiles()
         }
     }
 
+    char buf[256];
+
     for (const auto& fileName : fileNames) 
     {
         ifstream inFile(fileName); // Open input file
         if (inFile.is_open()) 
         {
-            string word;
-            while (inFile >> word) { // Read words
-                wordFreq[word]++; // Increment word frequency
+            // Read the entire file into a string.
+            std::stringstream ss;
+            ss << inFile.rdbuf();
+            std::string fileContents = ss.str();
+
+            const char* s = fileContents.c_str();
+            while (*s != '\0')
+            {
+                int n = std::sscanf(s, "%255s", buf);
+                if (n == 1)
+                {
+                    s += std::strlen(buf) + 1;
+                    ++wordFreq[buf];
+                }
+                else
+                {
+                    ++s;
+                }
             }
             inFile.close(); // Close input file
         }
@@ -88,7 +106,7 @@ void ParseTestFiles()
 
     for (size_t i = 0; i < fileNames.size(); ++i)
     {
-        string path = "Output/top_words_" + std::to_string(i) + ".txt";
+        string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\top_words_" + std::to_string(i) + ".txt";
 
         ofstream outFile(path); // Open output file
         if (outFile.is_open())
@@ -113,9 +131,9 @@ void ParseTestFiles()
     }
 }
 
-void ParseTestFilesConcurrent()
+__declspec(noinline)  void ParseTestFilesConcurrent()
 {
-    std::string directory = "TestFiles"; // Directory containing input files
+    std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles"; // Directory containing input files
     std::vector<std::string> fileNames;
 
     // Get all file paths in the directory
@@ -127,7 +145,7 @@ void ParseTestFilesConcurrent()
         }
     }
 
-    size_t totalThreads = 2;
+    size_t totalThreads = 8;
     moodycamel::ConcurrentQueue <string> filePaths;
     size_t chunks = fileNames.size() / totalThreads;
 
@@ -144,6 +162,8 @@ void ParseTestFilesConcurrent()
     {
         threads[i] = std::thread([&filePaths, &chunks](unordered_map<string, int> &wordsPerThread)
         {
+            char buf[256];
+
             vector<string> localFileNames;
             localFileNames.resize(chunks);
             filePaths.try_dequeue_bulk(localFileNames.begin(), chunks);
@@ -151,14 +171,29 @@ void ParseTestFilesConcurrent()
             for (const auto& fileName : localFileNames)
             {
                 ifstream inFile(fileName); // Open input file
+
                 if (inFile.is_open())
                 {
-                    string word;
-                    while (inFile >> word)
-                    {
-                        // Read words
-                        wordsPerThread[word]++; // Increment word frequency
+                    // Read the entire file into a string.
+                    std::stringstream ss;
+                    ss << inFile.rdbuf();
+                    std::string fileContents = ss.str();
+
+                    const char* s = fileContents.c_str();
+                    while (*s != '\0') 
+                    {                        
+                        int n = std::sscanf(s, "%255s", buf);
+                        if (n == 1) 
+                        {
+                            s += std::strlen(buf) + 1;
+                            ++wordsPerThread[buf];
+                        }
+                        else 
+                        {
+                            ++s;
+                        }
                     }
+
                     inFile.close(); // Close input file
                 }
                 else
@@ -189,30 +224,45 @@ void ParseTestFilesConcurrent()
         return a.second > b.second;
     });
 
+    vector<std::thread> outputThreads;
+    outputThreads.resize(totalThreads);
 
-    for (size_t i = 0; i < fileNames.size(); ++i)
+    filePaths.enqueue_bulk(fileNames.begin(), fileNames.size());
+
+    std::atomic<size_t> val = 0;
+    for (size_t i = 0; i < totalThreads; ++i)
     {
-        string path = "Output/top_words_" + std::to_string(i) + ".txt";
-
-        ofstream outFile(path); // Open output file
-        if (outFile.is_open())
+        outputThreads[i] = std::thread([&filePaths, &val, &chunks](const vector<pair<string, int>> &wordFreqVec) 
         {
-            int count = 0;
-            for (const auto& wordFreqPair : wordFreqVec)
+            for (size_t i = 0; i < chunks; ++i)
             {
-                outFile << wordFreqPair.first << ": " << wordFreqPair.second << endl; // Write top words to output file
-                count++;
-                if (count == 10)
+                string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputConcurrent\\top_words_" + std::to_string(val) + ".txt";
+                val++;
+
+                ofstream outFile(path); // Open output file
+                if (outFile.is_open())
                 {
-                    // Limit to top 10 words
-                    break;
+                    int count = 0;
+                    for (const auto& wordFreqPair : wordFreqVec)
+                    {
+                        outFile << wordFreqPair.first << ": " << wordFreqPair.second << endl; // Write top words to output file
+                        count++;
+                        if (count == 10)
+                        {
+                            // Limit to top 10 words
+                            break;
+                        }
+                    }
+                    outFile.close(); // Close output file
+                }
+                else
+                {
+                    cout << "Unable to open output file" << endl;
                 }
             }
-            outFile.close(); // Close output file
-        }
-        else
-        {
-            cout << "Unable to open output file" << endl;
-        }
+        }, std::ref(wordFreqVec));
     }
+
+    for (size_t i = 0; i < outputThreads.size(); ++i)
+        outputThreads[i].join();
 }
