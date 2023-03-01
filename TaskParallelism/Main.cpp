@@ -11,6 +11,7 @@
 #include <Windows.h>
 #include <WinBase.h>
 #include <tchar.h>
+#include "Utils.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -124,7 +125,7 @@ void SetupTestFolders()
 
 void CreateTestFiles()
 {
-    int numFiles = 1000; // Number of files to generate
+    int numFiles = 10000; // Number of files to generate
     int wordsPerFile = 1000; // Number of words per file
     string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles\\"; // Directory to save files in
 
@@ -201,32 +202,35 @@ __declspec(noinline) void ParseTestFiles()
     });
 
     std::vector<string> pathsToMove;
-    for (size_t i = 0; i < fileNames.size(); ++i)
-    {
-        string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\top_words_" + std::to_string(i) + ".txt";
+	for (size_t i = 0; i < fileNames.size(); ++i)
+	{
+		string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\top_words_" + std::to_string(i) + ".txt";
 
-        ofstream outFile(path); // Open output file
-        if (outFile.is_open())
-        {
-            int count = 0;
-            for (const auto& wordFreqPair : wordFreqVec)
-            {
-                outFile << wordFreqPair.first << ": " << wordFreqPair.second << endl; // Write top words to output file
-                count++;
-                if (count == 10) 
-                {
-                    // Limit to top 10 words
-                    break;
-                }
-            }
-            outFile.close(); // Close output file
-            pathsToMove.emplace_back(path);
-        }
-        else
-        {
-            cout << "Unable to open output file" << endl;
-        }
-    }
+		HANDLE handle = CreateFileA(path.c_str(), GENERIC_WRITE | GENERIC_READ | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Open output file
+		if (handle != INVALID_HANDLE_VALUE)
+		{
+			int count = 0;
+			for (const auto& wordFreqPair : wordFreqVec)
+			{
+				std::string line = wordFreqPair.first + ": " + std::to_string(wordFreqPair.second) + "\r\n";
+				DWORD bytesWritten = 0;
+				WriteFile(handle, line.c_str(), static_cast<DWORD>(line.size()), &bytesWritten, NULL); // Write top words to output file
+				count++;
+				if (count == 10)
+				{
+					// Limit to top 10 words
+					break;
+				}
+			}
+
+			pathsToMove.emplace_back(std::move(path));
+			CloseHandle(handle);
+		}
+		else
+		{
+			std::cout << "Unable to open output file" << std::endl;
+		}
+	}
 
 	for (size_t i = 0; i < pathsToMove.size(); ++i)
 	{
@@ -308,8 +312,18 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 			return a.second > b.second;
 		});
 
+	DWORD sectorSize = Utils::GetSectorSize();
+
 	std::vector<HANDLE> handles(fileNames.size());
     std::vector<string> toPaths;
+
+	void* pMemory = VirtualAlloc(NULL,sectorSize, MEM_COMMIT, PAGE_READWRITE);
+	if (!pMemory)
+	{
+		std::cerr << "Failed to allocate memory: " << GetLastError() << std::endl;
+		return;
+	}
+
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
         string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles\\top_words_" + std::to_string(i) + ".txt";
@@ -322,22 +336,38 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
             toPaths.emplace_back(std::move(toPath));
 		}
 
-        handles[i] = CreateFileA(path.c_str(), GENERIC_WRITE | GENERIC_READ | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Open output file
+		std::wstring wpath(path.begin(), path.end());
+		DWORD dwDesiredAccess = GENERIC_WRITE | DELETE;
+        handles[i] = CreateFileW(wpath.c_str(), 
+			dwDesiredAccess,
+			0, 
+			NULL, 
+			CREATE_ALWAYS, 
+			FILE_FLAG_NO_BUFFERING,
+			NULL); // Open output file
+
 		if (handles[i] != INVALID_HANDLE_VALUE)
 		{
 			int count = 0;
+
+			std::string contents;
 			for (const auto& wordFreqPair : wordFreqVec)
 			{
-				std::string line = wordFreqPair.first + ": " + std::to_string(wordFreqPair.second) + "\r\n";
-				DWORD bytesWritten = 0;
-				WriteFile(handles[i], line.c_str(), static_cast<DWORD>(line.size()), &bytesWritten, NULL); // Write top words to output file
 				count++;
+				contents += wordFreqPair.first + ": " + std::to_string(wordFreqPair.second) + "\r\n";
 				if (count == 10)
 				{
 					// Limit to top 10 words
 					break;
 				}
 			}
+			
+			memcpy(pMemory, contents.c_str(), contents.size());
+
+			DWORD bytesWritten = 0;
+			if(!WriteFile(handles[i], pMemory, sectorSize, &bytesWritten, NULL)) // Write top words to output file
+				std::cout << "Error writing to file: " << GetLastError() << std::endl;
+
 		}
 		else
 		{
@@ -345,9 +375,46 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 		}
 	}
 
-    std::wstring source_file_w;
+    
+	if (!VirtualFree(pMemory, 0, MEM_RELEASE))
+	{
+		std::cerr << "Failed to free memory: " << GetLastError() << std::endl;
+		return;
+	}
+
+
+	std::wstring source_file_w;
 	for (size_t i = 0; i < handles.size(); ++i)
 	{
+		/*FILE_IO_PRIORITY_HINT_INFO hint = {IoPriorityHintVeryLow};
+		DWORD bytesReturned = 0;
+
+		BOOL result = GetFileInformationByHandleEx(handles[i], FileIoPriorityHintInfo, &hint, sizeof(hint));
+		if (result)
+		{
+			switch (hint.PriorityHint)
+			{
+			case IoPriorityHintVeryLow:
+				// Handle very low priority hint
+				break;
+			case IoPriorityHintLow:
+				// Handle low priority hint
+				break;
+			case IoPriorityHintNormal:
+				// Handle normal priority hint
+				break;
+			default:
+				// Handle unknown priority hint
+				break;
+			}
+		}
+		else
+			std::cout << "Error getting priority hint info on file: " << GetLastError() << std::endl;*/
+
+		/*FILE_IO_PRIORITY_HINT_INFO hint = {IoPriorityHintNormal};
+		if (!SetFileInformationByHandle(handles[i], FileIoPriorityHintInfo, &hint, sizeof(hint)))
+			std::cout << "Error setting priority hint info on file: " << GetLastError() << std::endl;*/
+		
 		typedef struct _FILE_RENAME_INFORMATION
 		{
 			BOOLEAN ReplaceIfExists;
@@ -366,6 +433,17 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 		RenameInfo->RootDirectory = 0;
 		RenameInfo->FileNameLength = namesize;
 		memcpy(RenameInfo->FileName, source_file_w.c_str(), namesize);
+
+		/*DWORD transferSize;
+		DWORD outstandingRequests;
+		if (!SetFileBandwidthReservation(handles[i],
+			1000,
+			200,
+			FALSE,
+			&transferSize,
+			&outstandingRequests))
+			std::cout << "Error reserving bandwidth: " << GetLastError() << std::endl;
+*/
 
 		if (!SetFileInformationByHandle(handles[i], FileRenameInfo, RenameInfo, infosize))
 			std::cout << "Error renaming file: " << GetLastError() << std::endl;
