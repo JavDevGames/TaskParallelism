@@ -7,6 +7,8 @@
 #include <filesystem>
 #include "concurrentqueue.h"
 #include <cstdio>
+#include <string.h>
+#include <Windows.h>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -30,7 +32,7 @@ void CreateTestFiles()
 {
     int numFiles = 1000; // Number of files to generate
     int wordsPerFile = 1000; // Number of words per file
-    string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles\\"; // Directory to save files in
+    string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles\\"; // Directory to save files in
 
     for (int i = 1; i <= numFiles; i++) {
         stringstream fileName;
@@ -52,7 +54,7 @@ __declspec(noinline) void ParseTestFiles()
 {
     unordered_map<string, int> wordFreq; // To keep track of word frequency
 
-    std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles"; // Directory containing input files
+    std::string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles"; // Directory containing input files
     std::vector<std::string> fileNames;
 
     // Get all file paths in the directory
@@ -104,9 +106,10 @@ __declspec(noinline) void ParseTestFiles()
         return a.second > b.second;
     });
 
+    std::vector<string> pathsToMove;
     for (size_t i = 0; i < fileNames.size(); ++i)
     {
-        string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\top_words_" + std::to_string(i) + ".txt";
+        string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\top_words_" + std::to_string(i) + ".txt";
 
         ofstream outFile(path); // Open output file
         if (outFile.is_open())
@@ -123,17 +126,32 @@ __declspec(noinline) void ParseTestFiles()
                 }
             }
             outFile.close(); // Close output file
+            pathsToMove.emplace_back(path);
         }
         else
         {
             cout << "Unable to open output file" << endl;
         }
     }
+
+	for (size_t i = 0; i < pathsToMove.size(); ++i)
+	{
+		std::string& fromPath = pathsToMove[i];
+		std::string toPath = fromPath;
+		size_t pos = toPath.find("top_words");
+		if (pos != std::string::npos)
+		{
+			toPath.replace(pos, std::string("top_words").length(), "move_dir\\top_words");
+		}
+
+		if (!MoveFileA(fromPath.c_str(), toPath.c_str()))
+			std::cout << "Error moving file: " << GetLastError() << std::endl;
+	}
 }
 
 __declspec(noinline)  void ParseTestFilesConcurrent()
 {
-    std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles"; // Directory containing input files
+    std::string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\TestFiles"; // Directory containing input files
     std::vector<std::string> fileNames;
 
     // Get all file paths in the directory
@@ -236,7 +254,7 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
         {
             for (size_t i = 0; i < chunks; ++i)
             {
-                string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputConcurrent\\top_words_" + std::to_string(val) + ".txt";
+                string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\OutputConcurrent\\top_words_" + std::to_string(val) + ".txt";
                 val++;
 
                 ofstream outFile(path); // Open output file
