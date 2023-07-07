@@ -16,6 +16,7 @@
 #include "FileProcessors/OpenHandleConcurrentFileProcessor.h"
 #include "FileProcessors/OpenHandleFileProcessor.h"
 #include "FileProcessors/SequentialFileProcessor.h"
+#include "FileProcessors/PipelinedFileProcessor.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -47,6 +48,11 @@ int main()
     //Multi threaded
 	cout << "Multi-threaded Parse Test Files...";
     ParseTestFilesConcurrent();
+	cout << " Complete" << endl;
+
+	//Pipelined
+	cout << "Pipelined Parse Test Files...";
+	ParseTestFilesPipelined();
 	cout << " Complete" << endl;
 	
 	/*
