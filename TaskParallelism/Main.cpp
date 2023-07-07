@@ -771,35 +771,51 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
         return a.second > b.second;
     });
 
-	for (size_t i = 0; i < fileNames.size(); ++i)
+
+	vector<std::thread> createFileThreads;
+	createFileThreads.resize(totalThreads);
+
+	std::atomic<int> curVal = -1;
+
+	for (size_t i = 0; i < totalThreads; ++i)
 	{
-		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\top_words_" + std::to_string(i) + ".txt";
-
-		HANDLE handle = CreateFileA(path.c_str(), GENERIC_WRITE | GENERIC_READ | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Open output file
-		if (handle != INVALID_HANDLE_VALUE)
-		{
-			int count = 0;
-			for (const auto& wordFreqPair : wordFreqVec)
+		createFileThreads[i] = std::thread([&filePaths, &curVal, &chunks](unordered_map<string, int>& wordsPerThread)
 			{
-				std::string line = wordFreqPair.first + ": " + std::to_string(wordFreqPair.second) + "\r\n";
-				DWORD bytesWritten = 0;
-				WriteFile(handle, line.c_str(), static_cast<DWORD>(line.size()), &bytesWritten, NULL); // Write top words to output file
-				count++;
-				if (count == 10)
+				for (size_t i = 0; i < chunks; ++i)
 				{
-					// Limit to top 10 words
-					break;
-				}
-			}
+					int nonSharedVal = curVal++;
+					string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\top_words_" + std::to_string(nonSharedVal) + ".txt";
 
-			filePaths.enqueue(std::move(path));
-			CloseHandle(handle);
-		}
-		else
-		{
-			std::cout << "Unable to open output file" << std::endl;
-		}
+					HANDLE handle = CreateFileA(path.c_str(), GENERIC_WRITE | GENERIC_READ | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Open output file
+					if (handle != INVALID_HANDLE_VALUE)
+					{
+						int count = 0;
+						for (const auto& wordFreqPair : wordsPerThread)
+						{
+							std::string line = wordFreqPair.first + ": " + std::to_string(wordFreqPair.second) + "\r\n";
+							DWORD bytesWritten = 0;
+							WriteFile(handle, line.c_str(), static_cast<DWORD>(line.size()), &bytesWritten, NULL); // Write top words to output file
+							count++;
+							if (count == 10)
+							{
+								// Limit to top 10 words
+								break;
+							}
+						}
+
+						filePaths.enqueue(std::move(path));
+						CloseHandle(handle);
+					}
+					else
+					{
+						std::cout << "Unable to open output file" << std::endl;
+					}
+				}
+			}, std::ref(wordFreq[0]));
 	}
+
+	for (size_t i = 0; i < createFileThreads.size(); ++i)
+		createFileThreads[i].join();
 
     vector<std::thread> outputThreads;
     outputThreads.resize(totalThreads);
