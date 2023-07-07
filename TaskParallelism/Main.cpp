@@ -21,6 +21,7 @@ void ParseTestFilesWithOpenHandle();
 void CreateTestFiles();
 void ParseTestFilesConcurrent();
 void SetupTestFolders();
+void ParseTestFilesWithOpenHandleParallel();
 
 int main()
 {
@@ -33,7 +34,7 @@ int main()
 	cout << " Complete" << endl;
  
     //Single threaded
-
+	/*
 	cout << "Single Threaded Parse Test Files...";
     ParseTestFiles();
 	cout << " Complete" << endl;
@@ -44,6 +45,12 @@ int main()
     //Multi threaded
 	cout << "Multi-threaded Parse Test Files...";
     ParseTestFilesConcurrent();
+	cout << " Complete" << endl;
+	*/
+
+	// Multi threaded with open handle
+	cout << "Multi-threaded Parse Test Files...";
+	ParseTestFilesWithOpenHandleParallel();
 	cout << " Complete" << endl;
 }
 
@@ -103,27 +110,27 @@ void SetupTestFolders()
 {
 	// Directories to remove
 	vector<string> toRemove = {
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles",
-		//"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\Output",
-		//"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles",
+		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\Output",
+		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel",
 	};
 
 	// Directories to add
 	vector<string> toAdd = {
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles",
-		//"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\Output",
-		//"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles\\move_dir",
-		//"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\move_dir",
-		//"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles\\move_dir",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\move_dir"
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel",
-		"C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\move_dir"
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles",
+		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\Output",
+		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles\\move_dir",
+		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\Output\\move_dir",
+		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles\\move_dir",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\move_dir",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\move_dir"
 	};
 
 	for (const auto& path : toRemove)
@@ -144,7 +151,7 @@ void CreateTestFiles()
 {
     int numFiles = 1000; // Number of files to generate
     int wordsPerFile = 1000; // Number of words per file
-    string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory to save files in
+    string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory to save files in
 
     for (int i = 1; i <= numFiles; i++) 
 	{
@@ -170,7 +177,7 @@ __declspec(noinline) void ParseTestFiles()
 {
     unordered_map<string, int> wordFreq; // To keep track of word frequency
 
-    std::string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
+    std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
     std::vector<std::string> fileNames;
 
     // Get all file paths in the directory
@@ -225,7 +232,7 @@ __declspec(noinline) void ParseTestFiles()
     std::vector<string> pathsToMove;
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
-		string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles\\top_words_" + std::to_string(i) + ".txt";
+		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFiles\\top_words_" + std::to_string(i) + ".txt";
 
 		HANDLE handle = CreateFileA(path.c_str(), GENERIC_WRITE | GENERIC_READ | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Open output file
 		if (handle != INVALID_HANDLE_VALUE)
@@ -280,7 +287,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 {
 	unordered_map<string, int> wordFreq; // To keep track of word frequency
 
-	std::string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
+	std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
 	std::vector<std::string> fileNames;
 
 	// Get all file paths in the directory
@@ -347,7 +354,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
-        string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles\\top_words_" + std::to_string(i) + ".txt";
+        string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles\\top_words_" + std::to_string(i) + ".txt";
 
 		std::string toPath = path;
 		size_t pos = toPath.find("top_words");
@@ -479,7 +486,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 {
 	unordered_map<string, int> wordFreq; // To keep track of word frequency
 
-	std::string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
+	std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
 	std::vector<std::string> fileNames;
 
 	// Get all file paths in the directory
@@ -539,9 +546,17 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
-		string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\top_words_" + std::to_string(i) + ".txt";
+		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\top_words_" + std::to_string(i) + ".txt";
 
 		std::string toPath = path;
+
+		// And create the new name here
+		size_t pos = toPath.find("top_words");
+		if (pos != std::string::npos)
+		{
+			toPath.replace(pos, std::string("top_words").length(), "move_dir\\top_words");
+			toPaths.emplace_back(std::move(toPath));
+		}
 
 		std::wstring wpath(path.begin(), path.end());
 		DWORD dwDesiredAccess = GENERIC_WRITE | DELETE;
@@ -550,7 +565,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 			0,
 			NULL,
 			CREATE_ALWAYS,
-			FILE_FLAG_NO_BUFFERING,
+			NULL,
 			NULL); // Open output file
 
 		if (handles[i] != INVALID_HANDLE_VALUE)
@@ -569,69 +584,29 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 				}
 			}
 
-			memcpy(pMemory, contents.c_str(), contents.size());
-
 			DWORD bytesWritten = 0;
-			if (!WriteFile(handles[i], pMemory, sectorSize, &bytesWritten, NULL)) // Write top words to output file
+			if(!WriteFile(handles[i], contents.c_str(), static_cast<DWORD>(contents.size()), &bytesWritten, NULL)) // Write top words to output file
 				std::cout << "Error writing to file: " << GetLastError() << std::endl;
 
 		}
 		else
 		{
-			std::cout << "Unable to open output file" << std::endl;
+			std::cout << "Unable to open output file: " << GetLastError() << std::endl;
 		}
 	}
 
-
-	if (!VirtualFree(pMemory, 0, MEM_RELEASE))
+	typedef struct _FILE_RENAME_INFORMATION
 	{
-		std::cerr << "Failed to free memory: " << GetLastError() << std::endl;
-		return;
-	}
-
+		BOOLEAN ReplaceIfExists;
+		HANDLE RootDirectory;
+		ULONG FileNameLength;
+		WCHAR FileName[1];
+	} FILE_RENAME_INFORMATION, * PFILE_RENAME_INFORMATION;
 
 	std::wstring source_file_w;
-	for (size_t i = 0; i < handles.size(); ++i)
+	for (size_t i = 0; i < toPaths.size(); ++i)
 	{
-		/*FILE_IO_PRIORITY_HINT_INFO hint = {IoPriorityHintVeryLow};
-		DWORD bytesReturned = 0;
-
-		BOOL result = GetFileInformationByHandleEx(handles[i], FileIoPriorityHintInfo, &hint, sizeof(hint));
-		if (result)
-		{
-			switch (hint.PriorityHint)
-			{
-			case IoPriorityHintVeryLow:
-				// Handle very low priority hint
-				break;
-			case IoPriorityHintLow:
-				// Handle low priority hint
-				break;
-			case IoPriorityHintNormal:
-				// Handle normal priority hint
-				break;
-			default:
-				// Handle unknown priority hint
-				break;
-			}
-		}
-		else
-			std::cout << "Error getting priority hint info on file: " << GetLastError() << std::endl;*/
-
-			/*FILE_IO_PRIORITY_HINT_INFO hint = {IoPriorityHintNormal};
-			if (!SetFileInformationByHandle(handles[i], FileIoPriorityHintInfo, &hint, sizeof(hint)))
-				std::cout << "Error setting priority hint info on file: " << GetLastError() << std::endl;*/
-
-		typedef struct _FILE_RENAME_INFORMATION
-		{
-			BOOLEAN ReplaceIfExists;
-			HANDLE RootDirectory;
-			ULONG FileNameLength;
-			WCHAR FileName[1];
-		} FILE_RENAME_INFORMATION, * PFILE_RENAME_INFORMATION;
-
 		source_file_w = StringToWideString(toPaths[i]);
-
 		size_t namesize = (wcslen(source_file_w.c_str()) + 1) * sizeof(wchar_t);
 		size_t infosize = sizeof(FILE_RENAME_INFORMATION) + namesize;
 		FILE_RENAME_INFORMATION* RenameInfo = (FILE_RENAME_INFORMATION*)_alloca(infosize);
@@ -640,17 +615,6 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 		RenameInfo->RootDirectory = 0;
 		RenameInfo->FileNameLength = namesize;
 		memcpy(RenameInfo->FileName, source_file_w.c_str(), namesize);
-
-		/*DWORD transferSize;
-		DWORD outstandingRequests;
-		if (!SetFileBandwidthReservation(handles[i],
-			1000,
-			200,
-			FALSE,
-			&transferSize,
-			&outstandingRequests))
-			std::cout << "Error reserving bandwidth: " << GetLastError() << std::endl;
-*/
 
 		if (!SetFileInformationByHandle(handles[i], FileRenameInfo, RenameInfo, infosize))
 			std::cout << "Error renaming file: " << GetLastError() << std::endl;
@@ -663,7 +627,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 
 __declspec(noinline)  void ParseTestFilesConcurrent()
 {
-	std::string directory = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
+	std::string directory = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\CreateTestFiles\\"; // Directory containing input files
 	std::vector<std::string> fileNames;
 
     // Get all file paths in the directory
@@ -756,7 +720,7 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
 
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
-		string path = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\top_words_" + std::to_string(i) + ".txt";
+		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\top_words_" + std::to_string(i) + ".txt";
 
 		HANDLE handle = CreateFileA(path.c_str(), GENERIC_WRITE | GENERIC_READ | DELETE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Open output file
 		if (handle != INVALID_HANDLE_VALUE)
@@ -799,7 +763,7 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
             for (size_t i = 0; i < localFileNames.size(); ++i)
             {
 				val++;
-				string toPath = "C:\\UnitySrc\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\top_words_" + std::to_string(val) + ".txt";
+				string toPath = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\top_words_" + std::to_string(val) + ".txt";
                 
 				std::string& fromPath = localFileNames[i];
 				
