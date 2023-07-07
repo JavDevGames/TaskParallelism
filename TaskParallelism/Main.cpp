@@ -541,26 +541,32 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 
 	DWORD sectorSize = Utils::GetSectorSize();
 
-	std::vector<HANDLE> handles(fileNames.size());
-	std::vector<string> toPaths;
+	struct PathsAndHandles
+	{
+		string path;
+		HANDLE handle;
+	};
+
+	moodycamel::ConcurrentQueue <PathsAndHandles> pathsAndHandles;
 
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
+		PathsAndHandles toPath;
+
 		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\top_words_" + std::to_string(i) + ".txt";
 
-		std::string toPath = path;
+		toPath.path = path;
 
 		// And create the new name here
-		size_t pos = toPath.find("top_words");
+		size_t pos = toPath.path.find("top_words");
 		if (pos != std::string::npos)
 		{
-			toPath.replace(pos, std::string("top_words").length(), "move_dir\\top_words");
-			toPaths.emplace_back(std::move(toPath));
+			toPath.path.replace(pos, std::string("top_words").length(), "move_dir\\top_words");
 		}
 
 		std::wstring wpath(path.begin(), path.end());
 		DWORD dwDesiredAccess = GENERIC_WRITE | DELETE;
-		handles[i] = CreateFileW(wpath.c_str(),
+		toPath.handle = CreateFileW(wpath.c_str(),
 			dwDesiredAccess,
 			0,
 			NULL,
@@ -568,7 +574,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 			NULL,
 			NULL); // Open output file
 
-		if (handles[i] != INVALID_HANDLE_VALUE)
+		if (toPath.handle != INVALID_HANDLE_VALUE)
 		{
 			int count = 0;
 
@@ -585,9 +591,10 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 			}
 
 			DWORD bytesWritten = 0;
-			if(!WriteFile(handles[i], contents.c_str(), static_cast<DWORD>(contents.size()), &bytesWritten, NULL)) // Write top words to output file
+			if(!WriteFile(toPath.handle, contents.c_str(), static_cast<DWORD>(contents.size()), &bytesWritten, NULL)) // Write top words to output file
 				std::cout << "Error writing to file: " << GetLastError() << std::endl;
 
+			pathsAndHandles.enqueue(std::move(toPath));
 		}
 		else
 		{
@@ -603,26 +610,48 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 		WCHAR FileName[1];
 	} FILE_RENAME_INFORMATION, * PFILE_RENAME_INFORMATION;
 
-	std::wstring source_file_w;
-	for (size_t i = 0; i < toPaths.size(); ++i)
+
+	size_t totalThreads = 2;
+	vector<std::thread> outputThreads;
+	outputThreads.resize(totalThreads);
+
+	size_t chunks = pathsAndHandles.size_approx() / totalThreads;
+
+	std::atomic<size_t> val = 0;
+	for (size_t i = 0; i < totalThreads; ++i)
 	{
-		source_file_w = StringToWideString(toPaths[i]);
-		size_t namesize = (wcslen(source_file_w.c_str()) + 1) * sizeof(wchar_t);
-		size_t infosize = sizeof(FILE_RENAME_INFORMATION) + namesize;
-		FILE_RENAME_INFORMATION* RenameInfo = (FILE_RENAME_INFORMATION*)_alloca(infosize);
-		memset(RenameInfo, 0, infosize);
-		RenameInfo->ReplaceIfExists = TRUE;
-		RenameInfo->RootDirectory = 0;
-		RenameInfo->FileNameLength = namesize;
-		memcpy(RenameInfo->FileName, source_file_w.c_str(), namesize);
+		outputThreads[i] = std::thread([&pathsAndHandles, &val, &chunks]()
+		{
+			std::wstring source_file_w;
 
-		if (!SetFileInformationByHandle(handles[i], FileRenameInfo, RenameInfo, infosize))
-			std::cout << "Error renaming file: " << GetLastError() << std::endl;
+			vector<PathsAndHandles> localPathsAndHandles;
+			localPathsAndHandles.resize(chunks);
+			pathsAndHandles.try_dequeue_bulk(localPathsAndHandles.begin(), chunks);
 
-		CloseHandle(handles[i]);
+			for (size_t i = 0; i < localPathsAndHandles.size(); ++i)
+			{
+				source_file_w = StringToWideString(localPathsAndHandles[i].path);
+				size_t namesize = (wcslen(source_file_w.c_str()) + 1) * sizeof(wchar_t);
+				size_t infosize = sizeof(FILE_RENAME_INFORMATION) + namesize;
+				FILE_RENAME_INFORMATION* RenameInfo = (FILE_RENAME_INFORMATION*)_alloca(infosize);
+				memset(RenameInfo, 0, infosize);
+				RenameInfo->ReplaceIfExists = TRUE;
+				RenameInfo->RootDirectory = 0;
+				RenameInfo->FileNameLength = namesize;
+				memcpy(RenameInfo->FileName, source_file_w.c_str(), namesize);
+
+				if (!SetFileInformationByHandle(localPathsAndHandles[i].handle, FileRenameInfo, RenameInfo, infosize))
+					std::cout << "Error renaming file: " << GetLastError() << std::endl;
+
+				CloseHandle(localPathsAndHandles[i].handle);
+
+				source_file_w.clear();
+			}
+		});
 	}
 
-	source_file_w.clear();
+	for (size_t i = 0; i < outputThreads.size(); ++i)
+		outputThreads[i].join();
 }
 
 __declspec(noinline)  void ParseTestFilesConcurrent()
