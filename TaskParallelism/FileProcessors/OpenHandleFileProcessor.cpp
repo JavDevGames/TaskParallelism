@@ -192,17 +192,6 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 		RenameInfo->FileNameLength = namesize;
 		memcpy(RenameInfo->FileName, source_file_w.c_str(), namesize);
 
-		/*DWORD transferSize;
-		DWORD outstandingRequests;
-		if (!SetFileBandwidthReservation(handles[i],
-			1000,
-			200,
-			FALSE,
-			&transferSize,
-			&outstandingRequests))
-			std::cout << "Error reserving bandwidth: " << GetLastError() << std::endl;
-*/
-
 		if (!SetFileInformationByHandle(handles[i], FileRenameInfo, RenameInfo, infosize))
 			std::cout << "Error renaming file: " << GetLastError() << std::endl;
 		
