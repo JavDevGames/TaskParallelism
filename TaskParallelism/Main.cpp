@@ -46,9 +46,9 @@ int main()
 	*/
 
     //Multi threaded
-	cout << "Multi-threaded Parse Test Files...";
+	/*cout << "Multi-threaded Parse Test Files...";
     ParseTestFilesConcurrent();
-	cout << " Complete" << endl;
+	cout << " Complete" << endl;*/
 
 	//Pipelined
 	cout << "Pipelined Parse Test Files...";
@@ -125,6 +125,7 @@ void SetupTestFolders()
 		//"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\OutputHandles",
 		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent",
 		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesPipelined"
 	};
 
 	// Directories to add
@@ -139,7 +140,9 @@ void SetupTestFolders()
 		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent",
 		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesConcurrent\\move_dir",
 		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel",
-		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\move_dir"
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\move_dir",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesPipelined",
+		"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesPipelined\\move_dir"
 	};
 
 	for (const auto& path : toRemove)
