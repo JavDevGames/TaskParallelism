@@ -34,24 +34,27 @@ int main()
 	cout << " Complete" << endl;
  
     //Single threaded
-	/*
+	
 	cout << "Single Threaded Parse Test Files...";
     ParseTestFiles();
 	cout << " Complete" << endl;
 
+	/*
     //With open handles
     //ParseTestFilesWithOpenHandle();
+	*/
 
     //Multi threaded
 	cout << "Multi-threaded Parse Test Files...";
     ParseTestFilesConcurrent();
 	cout << " Complete" << endl;
-	*/
-
+	
+	/*
 	// Multi threaded with open handle
-	cout << "Multi-threaded Parse Test Files...";
+	cout << "Multi-threaded Parse Test Files with open handles...";
 	ParseTestFilesWithOpenHandleParallel();
 	cout << " Complete" << endl;
+	*/
 }
 
 void DeleteDirectory(const string& path)
@@ -544,18 +547,34 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 	struct PathsAndHandles
 	{
 		string path;
+		string relativePath;
 		HANDLE handle;
 	};
 
 	moodycamel::ConcurrentQueue <PathsAndHandles> pathsAndHandles;
 
+	HANDLE moveDirHandle = CreateFileW(L"C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\move_dir", 
+		FILE_ADD_FILE,
+		FILE_SHARE_READ | FILE_SHARE_WRITE,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS,
+		NULL);
+
+	if (moveDirHandle == INVALID_HANDLE_VALUE)
+	{
+		std::cout << "Error opening move directory: " << GetLastError() << std::endl;
+	}
+
 	for (size_t i = 0; i < fileNames.size(); ++i)
 	{
 		PathsAndHandles toPath;
 
-		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\top_words_" + std::to_string(i) + ".txt";
+		string fileName = "top_words_" + std::to_string(i) + ".txt";
+		string path = "C:\\Projects\\JavDev\\TaskParallelism\\TaskParallelism\\ParseTestFilesWithOpenHandleParallel\\" + fileName;
 
 		toPath.path = path;
+		toPath.relativePath = fileName;
 
 		// And create the new name here
 		size_t pos = toPath.path.find("top_words");
@@ -565,7 +584,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 		}
 
 		std::wstring wpath(path.begin(), path.end());
-		DWORD dwDesiredAccess = GENERIC_WRITE | DELETE;
+		DWORD dwDesiredAccess = FILE_GENERIC_WRITE  | FILE_WRITE_DATA| DELETE;
 		toPath.handle = CreateFileW(wpath.c_str(),
 			dwDesiredAccess,
 			0,
@@ -594,6 +613,9 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 			if(!WriteFile(toPath.handle, contents.c_str(), static_cast<DWORD>(contents.size()), &bytesWritten, NULL)) // Write top words to output file
 				std::cout << "Error writing to file: " << GetLastError() << std::endl;
 
+			if (!LockFile(toPath.handle, 0, 0, 0, 0))
+				std::cout << "Failed to lock file: " << GetLastError() << std::endl;
+
 			pathsAndHandles.enqueue(std::move(toPath));
 		}
 		else
@@ -620,7 +642,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 	std::atomic<size_t> val = 0;
 	for (size_t i = 0; i < totalThreads; ++i)
 	{
-		outputThreads[i] = std::thread([&pathsAndHandles, &val, &chunks]()
+		outputThreads[i] = std::thread([&pathsAndHandles, &val, &chunks, &moveDirHandle]()
 		{
 			std::wstring source_file_w;
 
@@ -631,12 +653,12 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 			for (size_t i = 0; i < localPathsAndHandles.size(); ++i)
 			{
 				source_file_w = StringToWideString(localPathsAndHandles[i].path);
-				size_t namesize = (wcslen(source_file_w.c_str()) + 1) * sizeof(wchar_t);
+				size_t namesize = (wcslen(source_file_w.c_str())+1) * sizeof(wchar_t);
 				size_t infosize = sizeof(FILE_RENAME_INFORMATION) + namesize;
 				FILE_RENAME_INFORMATION* RenameInfo = (FILE_RENAME_INFORMATION*)_alloca(infosize);
 				memset(RenameInfo, 0, infosize);
+				RenameInfo->RootDirectory = NULL;
 				RenameInfo->ReplaceIfExists = TRUE;
-				RenameInfo->RootDirectory = 0;
 				RenameInfo->FileNameLength = namesize;
 				memcpy(RenameInfo->FileName, source_file_w.c_str(), namesize);
 
@@ -652,6 +674,8 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 
 	for (size_t i = 0; i < outputThreads.size(); ++i)
 		outputThreads[i].join();
+
+	CloseHandle(moveDirHandle);
 }
 
 __declspec(noinline)  void ParseTestFilesConcurrent()
@@ -668,7 +692,7 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
         }
     }
 
-    size_t totalThreads = 2;
+    size_t totalThreads = 4;
     moodycamel::ConcurrentQueue <string> filePaths;
     size_t chunks = fileNames.size() / totalThreads;
 
@@ -805,8 +829,8 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
 				std::wstring fromPathW = StringToWideString(fromPath);
 				std::wstring toPathW = StringToWideString(toPath);
 
-				if (!MoveFileExW(fromPathW.c_str(), toPathW.c_str(), MOVEFILE_REPLACE_EXISTING))
-					std::cout << "Error moving file: " << GetLastError() << std::endl;
+				if (!CopyFileW(fromPathW.c_str(), toPathW.c_str(), true))
+					std::cout << "Error copying file: " << GetLastError() << std::endl;
             }
         }, std::ref(wordFreqVec));
     }
