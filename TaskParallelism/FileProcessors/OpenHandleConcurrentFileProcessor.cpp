@@ -1,4 +1,17 @@
 #include "OpenHandleConcurrentFileProcessor.h"
+#include <filesystem>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <unordered_map>
+#include <string.h>
+#include <Windows.h>
+#include "../concurrentqueue.h"
+#include "../Utils.h"
+
+using namespace std;
+namespace fs = std::filesystem;
 
 __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 {
@@ -57,7 +70,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 			return a.second > b.second;
 		});
 
-	DWORD sectorSize = Utils::GetSectorSize();
+	size_t sectorSize = Utils::GetSectorSize();
 
 	struct PathsAndHandles
 	{
@@ -167,7 +180,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandleParallel()
 
 			for (size_t i = 0; i < localPathsAndHandles.size(); ++i)
 			{
-				source_file_w = StringToWideString(localPathsAndHandles[i].path);
+				source_file_w = Utils::StringToWideString(localPathsAndHandles[i].path);
 				size_t namesize = (wcslen(source_file_w.c_str())+1) * sizeof(wchar_t);
 				size_t infosize = sizeof(FILE_RENAME_INFORMATION) + namesize;
 				FILE_RENAME_INFORMATION* RenameInfo = (FILE_RENAME_INFORMATION*)_alloca(infosize);

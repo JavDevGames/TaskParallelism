@@ -39,4 +39,12 @@ public:
 
 		return descriptor.BytesPerLogicalSector;
 	}
+
+	static std::wstring StringToWideString(const std::string& str)
+	{
+		int length = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, NULL, 0);
+		std::wstring result(length, 0);
+		MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &result[0], length);
+		return result;
+	}
 };

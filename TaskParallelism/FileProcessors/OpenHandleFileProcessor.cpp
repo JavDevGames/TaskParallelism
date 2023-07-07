@@ -1,4 +1,17 @@
 #include "OpenHandleFileProcessor.h"
+#include <filesystem>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <unordered_map>
+#include <string.h>
+#include <Windows.h>
+#include "../concurrentqueue.h"
+#include "../Utils.h"
+
+using namespace std;
+namespace fs = std::filesystem;
 
 __declspec(noinline) void ParseTestFilesWithOpenHandle()
 {
@@ -57,7 +70,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 			return a.second > b.second;
 		});
 
-	DWORD sectorSize = Utils::GetSectorSize();
+	size_t sectorSize = Utils::GetSectorSize();
 
 	std::vector<HANDLE> handles(fileNames.size());
     std::vector<string> toPaths;
@@ -110,7 +123,7 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 			memcpy(pMemory, contents.c_str(), contents.size());
 
 			DWORD bytesWritten = 0;
-			if(!WriteFile(handles[i], pMemory, sectorSize, &bytesWritten, NULL)) // Write top words to output file
+			if(!WriteFile(handles[i], pMemory, (DWORD) sectorSize, &bytesWritten, NULL)) // Write top words to output file
 				std::cout << "Error writing to file: " << GetLastError() << std::endl;
 
 		}
@@ -168,10 +181,10 @@ __declspec(noinline) void ParseTestFilesWithOpenHandle()
 			WCHAR FileName[1];
 		} FILE_RENAME_INFORMATION, * PFILE_RENAME_INFORMATION;
 
-        source_file_w = StringToWideString(toPaths[i]);
+        source_file_w = Utils::StringToWideString(toPaths[i]);
 
-		size_t namesize = (wcslen(source_file_w.c_str())+1) * sizeof(wchar_t);
-		size_t infosize = sizeof(FILE_RENAME_INFORMATION) + namesize;
+		ULONG namesize = (ULONG)((wcslen(source_file_w.c_str()) + 1) * sizeof(wchar_t));
+		ULONG infosize = (ULONG) (sizeof(FILE_RENAME_INFORMATION) + namesize);
 		FILE_RENAME_INFORMATION* RenameInfo = (FILE_RENAME_INFORMATION*) _alloca(infosize);
 		memset(RenameInfo, 0, infosize);
 		RenameInfo->ReplaceIfExists = TRUE;

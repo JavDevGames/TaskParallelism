@@ -121,10 +121,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FileProcessors\ConcurrentFileProcessor.cpp" />
+    <ClCompile Include="FileProcessors\OpenHandleConcurrentFileProcessor.cpp" />
+    <ClCompile Include="FileProcessors\OpenHandleFileProcessor.cpp" />
+    <ClCompile Include="FileProcessors\SequentialFileProcessor.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="concurrentqueue.h" />
+    <ClInclude Include="FileProcessors\ConcurrentFileProcessor.h" />
+    <ClInclude Include="FileProcessors\OpenHandleConcurrentFileProcessor.h" />
+    <ClInclude Include="FileProcessors\OpenHandleFileProcessor.h" />
+    <ClInclude Include="FileProcessors\SequentialFileProcessor.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

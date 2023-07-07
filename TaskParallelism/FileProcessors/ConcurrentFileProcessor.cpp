@@ -1,4 +1,17 @@
-include "ConcurrentFileProcessor.h"
+#include "ConcurrentFileProcessor.h"
+#include <filesystem>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <unordered_map>
+#include <string.h>
+#include <Windows.h>
+#include "../concurrentqueue.h"
+#include "../Utils.h"
+
+using namespace std;
+namespace fs = std::filesystem;
 
 __declspec(noinline)  void ParseTestFilesConcurrent()
 {
@@ -164,8 +177,8 @@ __declspec(noinline)  void ParseTestFilesConcurrent()
 					toPath.replace(pos, std::string("top_words").length(), "move_dir\\top_words");
 				}
 
-				std::wstring fromPathW = StringToWideString(fromPath);
-				std::wstring toPathW = StringToWideString(toPath);
+				std::wstring fromPathW = Utils::StringToWideString(fromPath);
+				std::wstring toPathW = Utils::StringToWideString(toPath);
 
 				if (!CopyFileW(fromPathW.c_str(), toPathW.c_str(), true))
 					std::cout << "Error copying file: " << GetLastError() << std::endl;
